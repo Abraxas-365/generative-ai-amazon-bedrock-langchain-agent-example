@@ -9,11 +9,11 @@ import requests
 import os
 
 # Instantiate boto3 clients and resources
-boto3_session = boto3.Session(region_name=os.environ['AWS_REGION'])
+boto3_session = boto3.Session(region_name=os.environ["AWS_REGION"])
 bedrock_client = boto3_session.client(service_name="bedrock-runtime")
 
-class Tools():
 
+class Tools:
     def __init__(self) -> None:
         print("Initializing Tools")
         self.tools = [
@@ -26,11 +26,15 @@ class Tools():
 
     def build_chain(self):
         print("Building Chain")
-        region = os.environ['AWS_REGION']
-        kendra_index_id = os.environ['KENDRA_INDEX_ID']
+        region = os.environ["AWS_REGION"]
+        kendra_index_id = os.environ["KENDRA_INDEX_ID"]
 
-        llm = Bedrock(client=bedrock_client, model_id="anthropic.claude-v2", region_name=os.environ['AWS_REGION']) # "anthropic.claude-instant-v1"
-        llm.model_kwargs = {'max_tokens_to_sample': 350} 
+        llm = Bedrock(
+            client=bedrock_client,
+            model_id="meta.llama2-70b-chat-v1",
+            region_name=os.environ["AWS_REGION"],
+        )  # "anthropic.claude-instant-v1"
+        llm.model_kwargs = {"max_tokens_to_sample": 350}
 
         retriever = AmazonKendraRetriever(index_id=kendra_index_id)
 
@@ -45,15 +49,15 @@ class Tools():
         """
 
         PROMPT = PromptTemplate(
-          template=prompt_template, input_variables=["context", "question"]
+            template=prompt_template, input_variables=["context", "question"]
         )
         chain_type_kwargs = {"prompt": PROMPT}
         return RetrievalQA.from_chain_type(
-          llm, 
-          chain_type="stuff", 
-          retriever=retriever, 
-          chain_type_kwargs=chain_type_kwargs,
-          return_source_documents=True
+            llm,
+            chain_type="stuff",
+            retriever=retriever,
+            chain_type_kwargs=chain_type_kwargs,
+            return_source_documents=True,
         )
 
     def run_chain(self, chain, prompt: str, history=[]):
@@ -61,19 +65,20 @@ class Tools():
         result = chain(prompt)
 
         return {
-            "answer": result['result'],
-            "source_documents": result['source_documents']
+            "answer": result["result"],
+            "source_documents": result["source_documents"],
         }
 
     def chain_tool(self, input):
         chain = self.build_chain()
         result = self.run_chain(chain, input)
 
-        if 'source_documents' in result:
-            print('Sources:')
-            for d in result['source_documents']:
-              print(d.metadata['source'])
+        if "source_documents" in result:
+            print("Sources:")
+            for d in result["source_documents"]:
+                print(d.metadata["source"])
 
         return result
+
 
 tools = Tools().tools
